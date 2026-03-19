@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AWF Glass Calculator</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0f10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AWF">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f10;
+    --panel: #161a1d;
+    --card: #1e2428;
+    --border: #2c3338;
+    --accent: #00d4aa;
+    --accent2: #0099ff;
+    --danger: #ff4d4d;
+    --text: #e8edf0;
+    --muted: #6b7a84;
+    --btn-bg: #252c32;
+    --btn-hover: #2e373e;
+    --btn-active: #364048;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  header {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 12px 0 20px;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  header span {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── Entry Summary Bar ── */
+  .entry-summary {
+    display: grid;
+    grid-template-columns: 1.4fr 1.2fr 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .es-cell {
+    background: var(--panel);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .es-cell.active-cell {
+    background: var(--card);
+  }
+
+  .es-label {
+    font-size: 0.55rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .es-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .es-value.filled { color: var(--text); }
+  .es-value.active { color: var(--accent); }
+
+  /* ── Service selector ── */
+  .service-panel {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 20px 16px;
+  }
+  .service-panel.visible { display: flex; }
+
+  .service-default {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0,212,170,0.1);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .service-default.selected { background: rgba(0,212,170,0.18); }
+  .service-default-icon { font-size: 1.4rem; }
+  .service-default-text { flex: 1; }
+  .service-default-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+  .service-default-desc {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 1px;
+  }
+  .service-check {
+    font-size: 1.2rem;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .service-default.selected .service-check { opacity: 1; }
+
+  .service-other-label {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .service-other-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .service-other-btn {
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.12s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .service-other-btn:hover { border-color: var(--accent2); }
+  .service-other-btn.selected {
+    background: rgba(0,153,255,0.12);
+    border-color: var(--accent2);
+  }
+  .service-other-btn-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--text);
+  }
+  .service-other-btn.selected .service-other-btn-name { color: var(--accent2); }
+  .service-other-btn-desc {
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* ── Area picker ── */
+  .area-picker {
+    padding: 0 16px 14px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .area-picker.visible { display: flex; }
+
+  .area-picker-label {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .area-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .area-chip {
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 7px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .area-chip:hover { border-color: var(--accent2); color: var(--accent2); }
+  .area-chip.selected { background: var(--accent2); border-color: var(--accent2); color: #000; }
+  .area-chip.new-area { border-style: dashed; color: var(--muted); }
+  .area-chip.new-area:hover { border-color: var(--accent); color: var(--accent); }
+  .area-chip.new-area.selected { background: transparent; border-color: var(--accent); color: var(--accent); border-style: dashed; }
+
+  /* ── Area name display ── */
+  .area-input-hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 0 20px 12px;
+    letter-spacing: 1px;
+    min-height: 24px;
+  }
+
+  /* item area label */
+  .item-area {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--accent2);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .svc-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-bottom: 3px;
+    font-weight: 500;
+  }
+  .svc-install    { background: rgba(0,212,170,0.15); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+  .svc-remove-install { background: rgba(0,153,255,0.15); color: var(--accent2); border: 1px solid rgba(0,153,255,0.3); }
+  .svc-remove     { background: rgba(255,77,77,0.12); color: var(--danger); border: 1px solid rgba(255,77,77,0.25); }
+
+  /* ── Entry Panel ── */
+  .entry-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .dimension-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dim-tab {
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .dim-tab.active {
+    background: var(--card);
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .display-area {
+    padding: 16px 20px 10px;
+  }
+
+  .dim-label {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .display-value {
+    font-size: 3rem;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+    color: var(--text);
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .display-value .cursor {
+    display: inline-block;
+    width: 3px;
+    height: 40px;
+    background: var(--accent);
+    animation: blink 1s step-end infinite;
+    border-radius: 2px;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .display-value .unit {
+    font-size: 1.2rem;
+    color: var(--muted);
+  }
+
+  /* fraction display */
+  .frac-display {
+    font-size: 0.8rem;
+    color: var(--accent2);
+    padding: 0 20px 12px;
+    min-height: 24px;
+    letter-spacing: 1px;
+  }
+
+  /* ── Keypad ── */
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+
+  .key {
+    background: var(--btn-bg);
+    border: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 500;
+    padding: 22px 10px;
+    cursor: pointer;
+    transition: background 0.08s, transform 0.08s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .key:active, .key.pressed {
+    background: var(--btn-active);
+    transform: scale(0.96);
+  }
+
+  .key:hover {
+    background: var(--btn-hover);
+  }
+
+  .key.frac {
+    font-size: 1rem;
+    color: var(--accent2);
+  }
+
+  .key.action {
+    color: var(--accent);
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+  }
+
+  .key.del {
+    color: var(--danger);
+    font-size: 1.6rem;
+  }
+
+  .key.add-btn {
+    background: var(--accent);
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    grid-column: span 2;
+  }
+
+  .key.add-btn:active { background: #00b899; }
+
+  /* ── Summary ── */
+  .summary-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+  }
+
+  .summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .summary-title {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .clear-all {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--danger);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .clear-all:hover { background: rgba(255,77,77,0.1); }
+
+  .items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--card);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .item-num {
+    font-size: 0.6rem;
+    color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+  }
+
+  .item-dims {
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+
+  .item-sqft {
+    font-size: 0.85rem;
+    color: var(--accent);
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .item-lnft {
+    font-size: 0.85rem;
+    color: #f0a500;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .item-del {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 4px;
+    transition: color 0.15s;
+  }
+  .item-del:hover { color: var(--danger); }
+
+  .item-edit {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 4px;
+    transition: color 0.15s;
+  }
+  .item-edit:hover { color: var(--accent2); }
+
+  .edit-banner {
+    display: none;
+    background: rgba(0, 153, 255, 0.12);
+    border: 1px solid var(--accent2);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--accent2);
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 2px;
+  }
+  .edit-banner.visible { display: block; }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    padding: 20px;
+    text-transform: uppercase;
+  }
+
+  /* ── Total ── */
+  .total-bar {
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .total-label {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .total-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  .total-value span {
+    font-size: 1rem;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  /* ── Native area input ── */
+  .area-input-wrap {
+    display: none;
+    padding: 16px 20px 4px;
+  }
+  .area-input-wrap.visible { display: block; }
+
+  .area-native-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--accent);
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    letter-spacing: 2px;
+    padding: 4px 0 8px;
+    outline: none;
+    caret-color: var(--accent);
+  }
+  .area-native-input::placeholder { color: var(--muted); }
+
+  /* scrollbar */
+  .items-list::-webkit-scrollbar { width: 4px; }
+  .items-list::-webkit-scrollbar-track { background: transparent; }
+  .items-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AWF</h1>
+  <span>Sqft Calculator</span>
+</header>
+
+<div class="app">
+
+  <!-- Entry Panel -->
+  <div class="entry-panel">
+
+    <!-- Summary bar showing current entry progress -->
+    <div class="entry-summary">
+      <div class="es-cell" id="es-svc">
+        <div class="es-label">Service</div>
+        <div class="es-value active filled" id="es-svc-val">Install</div>
+      </div>
+      <div class="es-cell" id="es-area">
+        <div class="es-label">Area</div>
+        <div class="es-value" id="es-area-val">—</div>
+      </div>
+      <div class="es-cell" id="es-w">
+        <div class="es-label">Width</div>
+        <div class="es-value" id="es-w-val">—</div>
+      </div>
+      <div class="es-cell" id="es-h">
+        <div class="es-label">Height</div>
+        <div class="es-value" id="es-h-val">—</div>
+      </div>
+      <div class="es-cell" id="es-q">
+        <div class="es-label">Qty</div>
+        <div class="es-value" id="es-q-val">—</div>
+      </div>
+    </div>
+
+    <div class="dimension-tabs">
+      <button class="dim-tab active" id="tab-s" onclick="switchDim('s')">SVC</button>
+      <button class="dim-tab" id="tab-a" onclick="switchDim('a')">AREA</button>
+      <button class="dim-tab" id="tab-w" onclick="switchDim('w')">WIDTH</button>
+      <button class="dim-tab" id="tab-h" onclick="switchDim('h')">HEIGHT</button>
+      <button class="dim-tab" id="tab-q" onclick="switchDim('q')">QTY</button>
+    </div>
+    <div class="display-area">
+      <div class="dim-label" id="dim-label">ENTER WIDTH (INCHES)</div>
+      <div class="display-value" id="display-value">
+        <span id="display-text">0</span>
+        <span class="cursor"></span>
+        <span class="unit">"</span>
+      </div>
+    </div>
+    <!-- Native text input for area name (mobile keyboard) -->
+    <div class="area-input-wrap" id="area-input-wrap">
+      <div class="dim-label">ENTER AREA / ROOM NAME</div>
+      <input
+        type="text"
+        id="area-native-input"
+        class="area-native-input"
+        placeholder="e.g. Living Room"
+        maxlength="30"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="words"
+        spellcheck="false"
+        oninput="onAreaInput(this.value)"
+      />
+    </div>
+    <!-- Service selector panel (shown when on 's' tab) -->
+    <div class="service-panel" id="service-panel">
+      <button class="service-default selected" id="svc-install" onclick="selectService('Install')">
+        <div class="service-default-icon">🔧</div>
+        <div class="service-default-text">
+          <div class="service-default-name">Install</div>
+          <div class="service-default-desc">New glass installation only</div>
+        </div>
+        <div class="service-check">✓</div>
+      </button>
+      <div class="service-other-label">— or select another service —</div>
+      <div class="service-other-btns">
+        <button class="service-other-btn" id="svc-remove-install" onclick="selectService('Remove & Install')">
+          <div class="service-other-btn-name">Remove & Install</div>
+          <div class="service-other-btn-desc">Old film out, new in</div>
+        </button>
+        <button class="service-other-btn" id="svc-remove" onclick="selectService('Remove Only')">
+          <div class="service-other-btn-name">Remove Only</div>
+          <div class="service-other-btn-desc">Removal without replacement</div>
+        </button>
+      </div>
+    </div>
+
+    <div id="sub-display"></div>
+    <div class="area-picker" id="area-picker">
+      <div class="area-picker-label">Previous areas — tap to reuse</div>
+      <div class="area-chips" id="area-chips"></div>
+    </div>
+
+    <div id="edit-banner" class="edit-banner">✏ Editing piece — changes replace original</div>
+
+    <div class="keypad">
+      <!-- Row 1 -->
+      <button class="key" onclick="keyPress('7', this)">7</button>
+      <button class="key" onclick="keyPress('8', this)">8</button>
+      <button class="key" onclick="keyPress('9', this)">9</button>
+      <button class="key del" onclick="keyPress('del', this)">⌫</button>
+      <!-- Row 2 -->
+      <button class="key" onclick="keyPress('4', this)">4</button>
+      <button class="key" onclick="keyPress('5', this)">5</button>
+      <button class="key" onclick="keyPress('6', this)">6</button>
+      <button class="key frac" onclick="keyPress('1/8', this)">¹⁄₈</button>
+      <!-- Row 3 -->
+      <button class="key" onclick="keyPress('1', this)">1</button>
+      <button class="key" onclick="keyPress('2', this)">2</button>
+      <button class="key" onclick="keyPress('3', this)">3</button>
+      <button class="key frac" onclick="keyPress('1/4', this)">¼</button>
+      <!-- Row 4 -->
+      <button class="key action" onclick="keyPress('clr', this)">CLR</button>
+      <button class="key" onclick="keyPress('0', this)">0</button>
+      <button class="key frac" onclick="keyPress('1/2', this)">½</button>
+      <button class="key frac" onclick="keyPress('3/4', this)">¾</button>
+      <!-- Row 5 -->
+      <button class="key add-btn" id="next-btn" onclick="nextOrAdd()">NEXT → AREA</button>
+      <button class="key" id="cancel-btn" onclick="cancelEdit()" style="display:none;grid-column:span 2;color:var(--danger);font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;">✕ CANCEL</button>
+    </div>
+  </div>
+
+  <!-- Total -->
+  <div class="total-bar">
+    <div>
+      <div class="total-label">Totals</div>
+      <div id="piece-count" style="font-size:0.65rem;color:var(--muted);letter-spacing:2px;margin-top:2px;">0 PIECES</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+      <div class="total-value" id="total-display">0.000<span>sq ft</span></div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#f0a500;letter-spacing:2px;" id="total-lnft-display">0.000<span style="font-size:0.9rem;color:var(--muted);margin-left:4px;">ln ft</span></div>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div class="summary-panel">
+    <div class="summary-header">
+      <div class="summary-title">Recorded Pieces</div>
+      <button class="clear-all" onclick="clearAll()">Clear All</button>
+    </div>
+    <div class="items-list" id="items-list">
+      <div class="empty-state" id="empty-state">No pieces recorded yet</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // State
+  let currentDim = 's'; // s=service, a=area name, w=width, h=height, q=qty
+  let serviceStr = 'Install';
+  let areaStr = '';
+  let widthStr = '';
+  let heightStr = '';
+  let qtyStr = '';
+  let widthFrac = 0;
+  let heightFrac = 0;
+  let pieces = [];
+  let nextId = 1;
+  let editingId = null;
+  let knownAreas = [];   // ordered list of unique area names seen so far
+  let usingNewArea = false; // true when "New area" chip is selected
+
+  // Area name uses letter keys via keyboard; number dims use keypad
+  const FRACS = { '1/8': 0.125, '1/4': 0.25, '1/2': 0.5, '3/4': 0.75 };
+  const FRAC_LABELS = { '1/8': '⅛', '1/4': '¼', '1/2': '½', '3/4': '¾' };
+
+  function getCurrentStr() {
+    if (currentDim === 'a') return areaStr;
+    if (currentDim === 'w') return widthStr;
+    if (currentDim === 'h') return heightStr;
+    return qtyStr;
+  }
+  function setCurrentStr(v) {
+    if (currentDim === 'a') areaStr = v;
+    else if (currentDim === 'w') widthStr = v;
+    else if (currentDim === 'h') heightStr = v;
+    else qtyStr = v;
+  }
+  function getCurrentFrac() {
+    if (currentDim === 'w') return widthFrac;
+    if (currentDim === 'h') return heightFrac;
+    return 0;
+  }
+  function setCurrentFrac(v) {
+    if (currentDim === 'w') widthFrac = v;
+    else if (currentDim === 'h') heightFrac = v;
+  }
+
+  function keyPress(k, btn) {
+    if (btn) { btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 120); }
+
+    // Area is handled by native input — ignore keypad on area tab
+    if (currentDim === 'a') return;
+
+    let s = getCurrentStr();
+    if (k === 'del') {
+      if (getCurrentFrac() !== 0) { setCurrentFrac(0); }
+      else { s = s.slice(0, -1); setCurrentStr(s); }
+    } else if (k === 'clr') {
+      setCurrentStr(''); setCurrentFrac(0);
+    } else if (k in FRACS) {
+      if (currentDim === 'q') return;
+      setCurrentFrac(getCurrentFrac() === FRACS[k] ? 0 : FRACS[k]);
+    } else {
+      if (s.length >= 5) return;
+      s += k; setCurrentStr(s);
+    }
+    updateDisplay();
+  }
+
+  function updateDisplay() {
+    const s = getCurrentStr();
+    const frac = getCurrentFrac();
+    const textEl = document.getElementById('display-text');
+    const unitEl = document.querySelector('.display-value .unit');
+    const subEl  = document.getElementById('sub-display');
+    const displayArea = document.querySelector('.display-area');
+    const keypad = document.querySelector('.keypad');
+    const svcPanel = document.getElementById('service-panel');
+    const areaPicker = document.getElementById('area-picker');
+
+    // Show/hide service panel vs keypad+display
+    const onService = currentDim === 's';
+    const onArea    = currentDim === 'a';
+    svcPanel.classList.toggle('visible', onService);
+    displayArea.style.display = (onService || onArea) ? 'none' : '';
+    keypad.style.display = onService ? 'none' : '';
+    subEl.style.display = onService ? 'none' : '';
+
+    // Area input
+    const areaWrap = document.getElementById('area-input-wrap');
+    const areaInput = document.getElementById('area-native-input');
+    areaWrap.classList.toggle('visible', onArea);
+    if (onArea) {
+      areaInput.value = areaStr;
+      // Small delay so the element is visible before focus (needed on iOS)
+      setTimeout(() => areaInput.focus(), 50);
+    }
+
+    if (onService) {
+      // Sync button selected states
+      selectService(serviceStr);
+      updateSummaryBar();
+      return;
+    }
+
+    if (currentDim === 'a') {
+      textEl.textContent = s === '' ? '—' : s;
+      unitEl.textContent = '';
+      const hasPrev = knownAreas.length > 0 && editingId === null;
+      if (hasPrev) {
+        areaPicker.classList.add('visible');
+        renderAreaChips();
+        subEl.className = 'area-input-hint';
+        subEl.textContent = usingNewArea ? 'Type new area name on keyboard' : '';
+      } else {
+        areaPicker.classList.remove('visible');
+        subEl.className = 'area-input-hint';
+        subEl.textContent = 'Type area / room name on keyboard';
+      }
+    } else if (currentDim === 'q') {
+      textEl.textContent = s === '' ? '0' : s;
+      unitEl.textContent = 'x';
+      subEl.className = 'frac-display';
+      subEl.textContent = '';
+    } else {
+      textEl.textContent = s === '' ? '0' : s;
+      unitEl.textContent = '"';
+      let fracLabel = '';
+      for (const [k, v] of Object.entries(FRACS)) {
+        if (v === frac) { fracLabel = FRAC_LABELS[k]; break; }
+      }
+      subEl.className = 'frac-display';
+      subEl.textContent = fracLabel ? `+ ${fracLabel}"` : '';
+    }
+
+    const labels = {
+      a: 'ENTER AREA / ROOM NAME',
+      w: 'ENTER WIDTH (INCHES)',
+      h: 'ENTER HEIGHT (INCHES)',
+      q: 'ENTER QUANTITY (PCS)'
+    };
+    document.getElementById('dim-label').textContent = labels[currentDim];
+    updateSummaryBar();
+  }
+
+  function updateSummaryBar() {
+    const cells = { s: 'es-svc', a: 'es-area', w: 'es-w', h: 'es-h', q: 'es-q' };
+    for (const [dim, id] of Object.entries(cells)) {
+      document.getElementById(id).classList.toggle('active-cell', dim === currentDim);
+    }
+
+    const svcVal = document.getElementById('es-svc-val');
+    // Abbreviate for small cell
+    const svcShort = { 'Install': 'Install', 'Remove & Install': 'R&I', 'Remove Only': 'Remove' };
+    svcVal.textContent = svcShort[serviceStr] || serviceStr;
+    svcVal.className = 'es-value filled' + (currentDim === 's' ? ' active' : '');
+
+    const aVal = document.getElementById('es-area-val');
+    aVal.textContent = areaStr || '—';
+    aVal.className = 'es-value' + (areaStr ? ' filled' : '') + (currentDim === 'a' ? ' active' : '');
+
+    const wVal = document.getElementById('es-w-val');
+    const wFilled = widthStr || widthFrac;
+    wVal.textContent = wFilled ? formatDim(widthStr, widthFrac) : '—';
+    wVal.className = 'es-value' + (wFilled ? ' filled' : '') + (currentDim === 'w' ? ' active' : '');
+
+    const hVal = document.getElementById('es-h-val');
+    const hFilled = heightStr || heightFrac;
+    hVal.textContent = hFilled ? formatDim(heightStr, heightFrac) : '—';
+    hVal.className = 'es-value' + (hFilled ? ' filled' : '') + (currentDim === 'h' ? ' active' : '');
+
+    const qVal = document.getElementById('es-q-val');
+    qVal.textContent = qtyStr || '—';
+    qVal.className = 'es-value' + (qtyStr ? ' filled' : '') + (currentDim === 'q' ? ' active' : '');
+  }
+
+  function switchDim(dim) {
+    currentDim = dim;
+    ['s','a','w','h','q'].forEach(d =>
+      document.getElementById('tab-' + d).classList.toggle('active', d === dim)
+    );
+    const btn = document.getElementById('next-btn');
+    if (dim === 's') btn.textContent = 'NEXT → AREA';
+    else if (dim === 'a') btn.textContent = 'NEXT → WIDTH';
+    else if (dim === 'w') btn.textContent = 'NEXT → HEIGHT';
+    else if (dim === 'h') btn.textContent = 'NEXT → QTY';
+    else btn.textContent = editingId !== null ? '✓ UPDATE PIECE' : '＋ ADD PIECE';
+
+    // When landing on area tab fresh (not editing), auto-select the last known area
+    if (dim === 'a' && editingId === null && knownAreas.length > 0 && !usingNewArea && areaStr === '') {
+      areaStr = knownAreas[knownAreas.length - 1];
+    }
+
+    updateDisplay();
+  }
+
+  function nextOrAdd() {
+    if (currentDim === 's') {
+      switchDim('a');
+    } else if (currentDim === 'a') {
+      // Grab latest value from native input before moving on
+      const inp = document.getElementById('area-native-input');
+      if (inp) areaStr = inp.value;
+      switchDim('w');
+    } else if (currentDim === 'w') {
+      const w = parseInt(widthStr || '0') + widthFrac;
+      if (w <= 0) { shake(); return; }
+      switchDim('h');
+    } else if (currentDim === 'h') {
+      const h = parseInt(heightStr || '0') + heightFrac;
+      if (h <= 0) { shake(); return; }
+      switchDim('q');
+    } else {
+      addPiece();
+    }
+  }
+
+  function onAreaInput(val) {
+    areaStr = val;
+    updateSummaryBar();
+    // Re-render chips to reflect typed value
+    if (document.getElementById('area-picker').classList.contains('visible')) {
+      renderAreaChips();
+    }
+  }
+
+  function selectService(name) {
+    serviceStr = name;
+    // Update button states
+    document.getElementById('svc-install').classList.toggle('selected', name === 'Install');
+    document.getElementById('svc-remove-install').classList.toggle('selected', name === 'Remove & Install');
+    document.getElementById('svc-remove').classList.toggle('selected', name === 'Remove Only');
+    updateSummaryBar();
+  }
+
+  function renderAreaChips() {
+    const container = document.getElementById('area-chips');
+    let html = '';
+    knownAreas.forEach(name => {
+      const sel = (areaStr === name && !usingNewArea) ? 'selected' : '';
+      html += `<button class="area-chip ${sel}" onclick="selectAreaChip('${name.replace(/'/g,"\\'")}')"> ${name}</button>`;
+    });
+    // "＋ New area" chip
+    const newSel = usingNewArea ? 'selected' : '';
+    html += `<button class="area-chip new-area ${newSel}" onclick="selectAreaChip('__new__')">＋ New area</button>`;
+    container.innerHTML = html;
+  }
+
+  function selectAreaChip(name) {
+    if (name === '__new__') {
+      usingNewArea = true;
+      areaStr = '';
+    } else {
+      usingNewArea = false;
+      areaStr = name;
+    }
+    // Sync native input
+    const inp = document.getElementById('area-native-input');
+    if (inp) { inp.value = areaStr; inp.focus(); }
+    updateDisplay();
+  }
+
+  function editPiece(id) {
+    const p = pieces.find(x => x.id === id);
+    if (!p) return;
+    editingId = id;
+
+    // Load piece values into entry fields
+    serviceStr = p.service || 'Install';
+    areaStr   = p.area === 'Unlabeled' ? '' : p.area;
+    // Decompose w back into whole + frac
+    widthFrac  = p.w % 1;
+    widthStr   = String(Math.floor(p.w));
+    heightFrac = p.h % 1;
+    heightStr  = String(Math.floor(p.h));
+    qtyStr     = String(p.qty);
+
+    // Show banner + cancel btn, shrink add btn
+    document.getElementById('edit-banner').classList.add('visible');
+    document.getElementById('cancel-btn').style.display = '';
+    document.getElementById('next-btn').style.gridColumn = 'span 2';
+
+    switchDim('s');
+    document.querySelector('.entry-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    areaStr = ''; widthStr = ''; heightStr = ''; qtyStr = '';
+    widthFrac = 0; heightFrac = 0;
+    usingNewArea = false;
+    document.getElementById('edit-banner').classList.remove('visible');
+    document.getElementById('cancel-btn').style.display = 'none';
+    document.getElementById('next-btn').style.gridColumn = '';
+    switchDim('s');
+    renderList();
+  }
+
+  function addPiece() {
+    const w = parseInt(widthStr || '0') + widthFrac;
+    const h = parseInt(heightStr || '0') + heightFrac;
+    const qty = Math.max(1, parseInt(qtyStr || '1'));
+    if (w <= 0 || h <= 0) { shake(); return; }
+
+    const sqftEach = (w * h) / 144;
+    const sqftTotal = sqftEach * qty;
+    const lnftEach = (2 * (w + h)) / 12;
+    const lnftTotal = lnftEach * qty;
+    const wLabel = formatDim(widthStr, widthFrac);
+    const hLabel = formatDim(heightStr, heightFrac);
+    const area = areaStr.trim() || 'Unlabeled';
+    const service = serviceStr;
+
+    if (editingId !== null) {
+      const idx = pieces.findIndex(x => x.id === editingId);
+      if (idx !== -1) {
+        pieces[idx] = { id: editingId, service, area, w, h, qty, wLabel, hLabel, sqftEach, sqftTotal, lnftEach, lnftTotal };
+      }
+      editingId = null;
+      document.getElementById('edit-banner').classList.remove('visible');
+      document.getElementById('cancel-btn').style.display = 'none';
+      document.getElementById('next-btn').style.gridColumn = '';
+    } else {
+      pieces.push({ id: nextId++, service, area, w, h, qty, wLabel, hLabel, sqftEach, sqftTotal, lnftEach, lnftTotal });
+    }
+
+    // reset dims but keep service
+    areaStr = ''; widthStr = ''; heightStr = ''; qtyStr = '';
+    widthFrac = 0; heightFrac = 0;
+    usingNewArea = false;
+    if (area !== 'Unlabeled' && !knownAreas.includes(area)) knownAreas.push(area);
+    switchDim('a');
+    renderList();
+    renderTotal();
+  }
+
+  function formatDim(s, frac) {
+    const base = parseInt(s || '0');
+    let fracStr = '';
+    for (const [k, v] of Object.entries(FRACS)) {
+      if (v === frac) { fracStr = FRAC_LABELS[k]; break; }
+    }
+    return fracStr ? `${base}${fracStr}"` : `${base}"`;
+  }
+
+  function deletePiece(id) {
+    pieces = pieces.filter(p => p.id !== id);
+    renderList();
+    renderTotal();
+  }
+
+  function clearAll() {
+    if (pieces.length === 0) return;
+    pieces = [];
+    renderList();
+    renderTotal();
+  }
+
+  function renderList() {
+    const el = document.getElementById('items-list');
+    if (pieces.length === 0) {
+      el.innerHTML = '<div class="empty-state">No pieces recorded yet</div>';
+      return;
+    }
+
+    // Group by area
+    const groups = {};
+    pieces.forEach(p => {
+      if (!groups[p.area]) groups[p.area] = [];
+      groups[p.area].push(p);
+    });
+
+    let html = '';
+    let lineNum = 0;
+    for (const [area, grpPieces] of Object.entries(groups)) {
+      const grpSqft  = grpPieces.reduce((a, p) => a + p.sqftTotal, 0);
+      const grpLnft  = grpPieces.reduce((a, p) => a + p.lnftTotal, 0);
+      html += `<div style="margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px 4px;">
+          <div style="font-size:0.65rem;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;">${area}</div>
+          <div style="display:flex;gap:12px;font-size:0.65rem;letter-spacing:1px;">
+            <span style="color:#f0a500;">${grpLnft.toFixed(2)} ln ft</span>
+            <span style="color:var(--muted);">${grpSqft.toFixed(3)} ft²</span>
+          </div>
+        </div>`;
+      grpPieces.forEach(p => {
+        lineNum++;
+        const isEditing = p.id === editingId;
+        const svcClass = p.service === 'Install' ? 'svc-install' : p.service === 'Remove & Install' ? 'svc-remove-install' : 'svc-remove';
+        html += `
+        <div class="item-row" style="${isEditing ? 'border-color:var(--accent2);background:#1a2530;' : ''}">
+          <div>
+            <div class="item-num">#${String(lineNum).padStart(2,'0')}</div>
+            <span class="svc-badge ${svcClass}">${p.service || 'Install'}</span>
+            <div class="item-dims">${p.wLabel} × ${p.hLabel}${p.qty > 1 ? ` <span style="color:var(--accent2)">×${p.qty}</span>` : ''}</div>
+            ${p.qty > 1 ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:2px;">${p.sqftEach.toFixed(3)} ft² · ${p.lnftEach.toFixed(2)} ln ft each</div>` : ''}
+          </div>
+          <div class="item-lnft">${p.lnftTotal.toFixed(2)}<div style="font-size:0.55rem;color:var(--muted);letter-spacing:1px;">LN FT</div></div>
+          <div class="item-sqft">${p.sqftTotal.toFixed(3)}<div style="font-size:0.55rem;color:var(--muted);letter-spacing:1px;">SQ FT</div></div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <button class="item-edit" onclick="editPiece(${p.id})" title="Edit">✏</button>
+            <button class="item-del" onclick="deletePiece(${p.id})" title="Delete">✕</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function renderTotal() {
+    const totalSqft = pieces.reduce((a, p) => a + p.sqftTotal, 0);
+    const totalLnft = pieces.reduce((a, p) => a + p.lnftTotal, 0);
+    const totalPcs  = pieces.reduce((a, p) => a + p.qty, 0);
+    document.getElementById('total-display').innerHTML = `${totalSqft.toFixed(3)}<span>sq ft</span>`;
+    document.getElementById('total-lnft-display').innerHTML = `${totalLnft.toFixed(2)}<span style="font-size:0.9rem;color:var(--muted);margin-left:4px;">ln ft</span>`;
+    document.getElementById('piece-count').textContent =
+      `${pieces.length} LINE${pieces.length !== 1 ? 'S' : ''} · ${totalPcs} PCS`;
+  }
+
+  function shake() {
+    const d = document.getElementById('display-value');
+    if (!d) return;
+    d.style.color = 'var(--danger)';
+    setTimeout(() => { d.style.color = ''; }, 400);
+  }
+
+  // Keyboard support
+  document.addEventListener('keydown', e => {
+    if (currentDim === 's') {
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); nextOrAdd(); }
+    } else if (currentDim === 'a') {
+      // Native input handles typing; just intercept Enter/Tab to advance
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); nextOrAdd(); }
+    } else {
+      if (e.key >= '0' && e.key <= '9') keyPress(e.key, null);
+      else if (e.key === 'Backspace') keyPress('del', null);
+      else if (e.key === 'Escape') keyPress('clr', null);
+      else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); nextOrAdd(); }
+    }
+  });
+
+  // Register service worker for PWA offline support
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  switchDim('s');
+</script>
+</body>
+</html>
