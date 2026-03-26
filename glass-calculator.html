@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1115,6 +1114,7 @@
       </div>
       <div class="est-action-row">
         <button class="est-pdf-btn" onclick="exportPDF()">📄 EXPORT PDF</button>
+        <button class="est-pdf-btn" onclick="exportSIPS()" style="background:rgba(0,180,80,0.13);border-color:rgba(0,180,80,0.35);color:#00c85a;">📊 EXPORT SIPS</button>
         <button class="est-reset-btn" onclick="resetEstimate()">↺ RESET</button>
       </div>
     </div>
@@ -1750,6 +1750,59 @@
     document.getElementById('est-customer').value = '';
   }
 
+  function exportSIPS() {
+    if (!pieces.length) { alert('No pieces recorded yet.'); return; }
+
+    // Map app service labels to SIPS service values
+    const serviceMap = {
+      'install': 'Install',
+      'remove_install': 'Remove & Install',
+      'remove': 'Remove Only'
+    };
+
+    // Build rows: one row per piece (expanded by quantity for SIPS)
+    const rows = [];
+    pieces.forEach(p => {
+      const svc = serviceMap[p.service] || p.service;
+      const w = parseFloat(p.w) || 0;
+      const h = parseFloat(p.h) || 0;
+      const qty = parseInt(p.qty) || 1;
+      rows.push({
+        'area': p.area || '',
+        'service': svc,
+        'width': w,
+        'height': h,
+        'quantity': qty,
+        'exposition': '',
+        'ov. price': ''
+      });
+    });
+
+    // Create workbook matching the SIPS template exactly
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: ['area', 'service', 'width', 'height', 'quantity', 'exposition', 'ov. price']
+    });
+
+    // Ensure 1000 rows are pre-allocated (fill empty rows like template)
+    const maxRow = 1001; // row 1 = header, rows 2-1001 = data
+    for (let r = rows.length + 2; r <= maxRow; r++) {
+      ['A','B','C','D','E','F','G'].forEach(col => {
+        const ref = col + r;
+        if (!ws[ref]) ws[ref] = { t: 'z', v: undefined };
+      });
+    }
+    ws['!ref'] = 'A1:G1000';
+
+    XLSX.utils.book_append_sheet(wb, ws, 'windows_1087824');
+
+    // Generate filename from job name
+    const jobName = document.getElementById('job-name-input').value.trim() || 'AWF_Job';
+    const safe = jobName.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    XLSX.writeFile(wb, `${safe}_SIPS_${dateStr}.xlsx`);
+  }
+
   function exportPDF() {
     if (pieces.length === 0) { alert('No pieces recorded. Add some windows first.'); return; }
 
@@ -1843,5 +1896,6 @@
 
   switchDim('s');
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
